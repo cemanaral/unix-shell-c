@@ -1,13 +1,21 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <dirent.h> 
  
 #define MAX_LINE 80 /* 80 chars per line, per command, should be enough. */
  
+// function headers
+void findExecutablePath(char * args[MAX_LINE/2 + 1], char executablePath[MAX_LINE]);
+
 /* The setup function below will not return any value, but it will just: read
 in the next command line; separate it into distinct arguments (using blanks as
 delimiters), and set the args array entries to point to the beginning of what
 will become null-terminated, C-style strings. */
+
 
 void setup(char inputBuffer[], char *args[],int *background)
 {
@@ -83,16 +91,105 @@ int main(void)
             char inputBuffer[MAX_LINE]; /*buffer to hold command entered */
             int background; /* equals 1 if a command is followed by '&' */
             char *args[MAX_LINE/2 + 1]; /*command line arguments */
+
+            pid_t forkResult; // holds the result of fork()
+            char executablePath[MAX_LINE]; // holds the executable path that user wants to run
+            
             while (1){
                         background = 0;
                         printf("myshell: ");
                         /*setup() calls exit() when Control-D is entered */
                         setup(inputBuffer, args, &background);
-                       
+
                         /** the steps are:
                         (1) fork a child process using fork()
                         (2) the child process will invoke execv()
 						(3) if background == 0, the parent will wait,
                         otherwise it will invoke the setup() function again. */
+                        
+                        forkResult = fork();
+                        if (forkResult < 0) { 
+                            perror("Failed to fork"); 
+                            return 1; 
+                        }
+                        // child process
+                        else if (forkResult == 0)  {
+                            // TODO: Find the desired executable's directory
+                            // by searching each directory in $PATH
+                            strcpy(executablePath, "");
+                            findExecutablePath(args, executablePath);
+                            // if executable does not exist
+                            if (strcmp(executablePath, "")==0 ) {
+                                printf("%s executable is not found!! \n", args[0]);
+                            }
+                            else { // execution
+                                printf("%s executable path is: %s \n", args[0], executablePath);
+                                execv(executablePath, args);
+                            }
+                            
+                            
+                        }
+
+                        // parent process
+                        else if (forkResult > 0) {
+                            // if it is not a background process
+                            // wait for it
+                            if (args[1] != NULL && strcmp(args[1], "&")==0) {
+                                printf("!!background process, not waiting for it \n");
+                            }
+                                
+                            else {
+                                wait(NULL);
+                            }
+                                
+                                
+                        }
+                       
             }
+}
+
+// Finds executable path from $PATH environment variable
+void findExecutablePath(char * args[MAX_LINE/2 + 1], char executablePath[MAX_LINE]) {
+    // printf("findExecutablePath is running\n");
+
+    // gets executable name from command line args
+    char executableName[MAX_LINE/2 + 1];
+    strcpy(executableName, args[0]);
+    
+    char *directories;
+    char *directory;
+    char foundExecutableDirectory[MAX_LINE];
+    directories = strdup(getenv("PATH")); // gets everything in $PATH with delimitor ':'
+    DIR *dir_current;
+    struct dirent *dir_entry;
+    
+    // slices every directory and loops through them
+    while( (directory=strsep(&directories,":")) != NULL ) {
+        // Loops every filename in directory variable
+        // if filename is same as executableName
+        // copy path to executablePath and return
+        // printf("files under %s\n",directory);
+        dir_current = opendir(directory);
+        
+        while ((dir_entry = readdir(dir_current)) != NULL) {
+            // avoid "." and ".."
+            if (strcmp(dir_entry->d_name, ".") != 0 && strcmp(dir_entry->d_name, "..") != 0) {
+                // printf("\t%s \n", dir_entry->d_name);
+                // if filename matches executableName
+                if (strcmp(dir_entry->d_name, executableName)==0) {
+                    // printf("there is a match!! \n");
+                    // printf("%s \n", directory);
+                    // printf("%s \n", dir_entry->d_name);
+                    strcpy(foundExecutableDirectory, directory);
+                    strcat(foundExecutableDirectory, "/");
+                    strcat(foundExecutableDirectory, executableName);
+
+                    strcpy(executablePath, foundExecutableDirectory);
+                    return;
+                }
+
+            }
+                
+        }    
+    }
 }
