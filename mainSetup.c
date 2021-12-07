@@ -125,6 +125,12 @@ int main(void)
                             }
                             else { // execution
                                 printf("%s executable path is: %s \n", args[0], executablePath);
+                                // if it is a background process
+                                // remove ampersand from args
+                                if (background) {
+                                    args[1] = NULL;
+                                }
+                                
                                 execv(executablePath, args);
                             }
                             
