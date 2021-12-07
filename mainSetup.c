@@ -8,6 +8,7 @@
  
 #define MAX_LINE 80 /* 80 chars per line, per command, should be enough. */
  
+int status = 0;
 // function headers
 void findExecutablePath(char * args[MAX_LINE/2 + 1], char executablePath[MAX_LINE]);
 
@@ -134,12 +135,13 @@ int main(void)
                         else if (forkResult > 0) {
                             // if it is not a background process
                             // wait for it
-                            if (args[1] != NULL && strcmp(args[1], "&")==0) {
+                            if (background) {
                                 printf("!!background process, not waiting for it \n");
                             }
                                 
                             else {
-                                wait(NULL);
+                                // wait for all childs
+                                while (wait(&status) > 0);
                             }
                                 
                                 
