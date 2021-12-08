@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <dirent.h> 
+#include <signal.h>
  
 #define MAX_LINE 80 /* 80 chars per line, per command, should be enough. */
 
@@ -17,6 +18,7 @@ struct aliasNode {
 struct aliasNode *head = NULL;
 
 int status = 0;
+pid_t forkResult; // holds the result of fork()
 // function headers
 void findExecutablePath(char * args[MAX_LINE/2 + 1], char executablePath[MAX_LINE]);
 void printAliases();
@@ -24,6 +26,7 @@ void addAlias(char* aliasName, char* command);
 void removeAlias(char* aliasName);
 struct aliasNode* findAlias(char* aliasName);
 void alias(char * args[MAX_LINE/2 + 1]);
+void handlerFunction();
 
 /* The setup function below will not return any value, but it will just: read
 in the next command line; separate it into distinct arguments (using blanks as
@@ -106,8 +109,18 @@ int main(void)
             int background; /* equals 1 if a command is followed by '&' */
             char *args[MAX_LINE/2 + 1]; /*command line arguments */
 
-            pid_t forkResult; // holds the result of fork()
+            
             char executablePath[MAX_LINE]; // holds the executable path that user wants to run
+
+            // setting up signal handler
+            struct sigaction act;
+            act.sa_handler = handlerFunction;            /* set up signal handler */
+            act.sa_flags = 0;
+            if ((sigemptyset(&act.sa_mask) == -1) || (sigaction(SIGTSTP, &act, NULL) == -1)) {
+                perror("Failed to set SIGTSTP handler");
+                return 1;
+            }
+
             
             while (1){
                         strcpy(executablePath, "");
@@ -143,6 +156,11 @@ int main(void)
                             continue;
                         }
 
+                        if (strcmp(args[0], "exit")==0) {
+                            if (!background) {
+                                exit(0);
+                            }
+                        }
                         
                         forkResult = fork();
                         if (forkResult < 0) { 
@@ -336,4 +354,10 @@ struct aliasNode* findAlias(char* aliasName) {
         }
     }
     return current;
+}
+
+void handlerFunction(int signo) {
+    printf("\nhandler function is called \n");
+    printf("exiting shell.. \n");
+    exit(0);
 }
