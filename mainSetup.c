@@ -98,7 +98,7 @@ int main(void)
             
             while (1){
                         background = 0;
-                        printf("myshell: ");
+                        printf("myshell: \n");
                         /*setup() calls exit() when Control-D is entered */
                         setup(inputBuffer, args, &background);
 
