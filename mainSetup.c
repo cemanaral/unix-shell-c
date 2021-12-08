@@ -7,23 +7,10 @@
 #include <dirent.h> 
  
 #define MAX_LINE 80 /* 80 chars per line, per command, should be enough. */
-
-// will be used for alias/unalias functionality
-struct aliasNode {
-    char* aliasName;
-    char* command;
-    struct aliasNode* next;
-};
-struct aliasNode *head = NULL;
-
+ 
 int status = 0;
 // function headers
 void findExecutablePath(char * args[MAX_LINE/2 + 1], char executablePath[MAX_LINE]);
-void printAliases();
-void addAlias(char* aliasName, char* command);
-void removeAlias(char* aliasName);
-void findAlias(char* aliasName);
-void alias(char * args[MAX_LINE/2 + 1]);
 
 /* The setup function below will not return any value, but it will just: read
 in the next command line; separate it into distinct arguments (using blanks as
@@ -110,31 +97,16 @@ int main(void)
             char executablePath[MAX_LINE]; // holds the executable path that user wants to run
             
             while (1){
-                        strcpy(executablePath, "");
                         background = 0;
-                        printf("myshell: \n");
+                        printf("myshell: ");
                         /*setup() calls exit() when Control-D is entered */
                         setup(inputBuffer, args, &background);
 
-                        // if alias command is called
-                        if (args[0] != NULL && strcmp(args[0], "alias")==0) {
-                            // if user wants a list of set aliases
-                            if (args[1] != NULL && strcmp(args[1], "-l")==0) {
-                                printAliases();
-                            }
-                            else {
-                              alias(args);
-                            }
-
-                            
-                            continue;
-                        }
-
-                        // if unalias command is called
-                        if (args[0] != NULL && strcmp(args[0], "unalias")==0) {
-                            removeAlias(args[1]);
-                            continue;
-                        }
+                        /** the steps are:
+                        (1) fork a child process using fork()
+                        (2) the child process will invoke execv()
+						(3) if background == 0, the parent will wait,
+                        otherwise it will invoke the setup() function again. */
                         
                         forkResult = fork();
                         if (forkResult < 0) { 
@@ -143,9 +115,9 @@ int main(void)
                         }
                         // child process
                         else if (forkResult == 0)  {
-                            // Find the desired executable's directory
+                            // TODO: Find the desired executable's directory
                             // by searching each directory in $PATH
-                            
+                            strcpy(executablePath, "");
                             findExecutablePath(args, executablePath);
                             // if executable does not exist
                             if (strcmp(executablePath, "")==0 ) {
@@ -228,85 +200,4 @@ void findExecutablePath(char * args[MAX_LINE/2 + 1], char executablePath[MAX_LIN
                 
         }    
     }
-}
-
-
-void printAliases() {
-    struct aliasNode* current = head;
-    while (current != NULL) {
-        printf("\t %s \"%s\"\n", current->aliasName, current->command);
-        current = current->next;
-    }
-}
-
-// creates new alias node
-// and insert to linked list
-void addAlias(char* aliasName, char* command) {
-    struct aliasNode* node = (struct aliasNode*)malloc(sizeof(struct aliasNode));
-    node->aliasName = malloc(MAX_LINE/2 +1);
-    node->command = malloc(MAX_LINE/2 +1);
-    strcpy(node->aliasName, aliasName);
-    strcpy(node->command, command);
-
-    node->next=head;
-    head=node;
-}
-
-// removes alias node
-// with given alias name
-void removeAlias(char* aliasName) {
-    struct aliasNode* current = head;
-    struct aliasNode* previous = NULL;
-
-    if(head == NULL)
-        return;
-    
-
-    while(strcmp(current->aliasName, aliasName)!=0) {
-        if (current->next == NULL)
-            return;
-        else {
-            previous = current;
-            current = current->next;
-        }
-    }
-
-    if (current == head) {
-        head = head->next;
-    }
-    else {
-        previous->next = current->next;
-    }
-}
-
-
-void alias(char * args[MAX_LINE/2 + 1]) {
-    // for getting the last element in args
-    // which is alias name
-    int aliasNameIndex;
-    for (aliasNameIndex=0; aliasNameIndex<MAX_LINE/2 + 1; aliasNameIndex++) 
-        if (args[aliasNameIndex] == NULL) break;
-    aliasNameIndex--;
-
-    char aliasName[MAX_LINE/2 + 1];
-    strcpy(aliasName, args[aliasNameIndex]);
-
-
-    
-    // print commands
-    char commandWithQuotes[MAX_LINE/2 + 1];
-    strcpy(commandWithQuotes, "");
-    for (int i = 1; i < aliasNameIndex; i++) {
-        strcat(commandWithQuotes, args[i]);
-        strcat(commandWithQuotes, " ");
-    }
-
-
-
-    char command[MAX_LINE/2 +1];
-    strncpy(command, commandWithQuotes+1, strlen(commandWithQuotes)-3);
-    command[strlen(command)] = '\0';
-
-
-    addAlias(aliasName,command);
 }
