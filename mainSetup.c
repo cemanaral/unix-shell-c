@@ -64,8 +64,8 @@ void setup(char inputBuffer[], char *args[],int *background)
         perror("error reading the command");
 	exit(-1);           /* terminate with error code of -1 */
     }
-
-	printf(">>%s<<",inputBuffer);
+    
+	// printf(">>%s<<",inputBuffer);
     for (i=0;i<length;i++){ /* examine every character in the inputBuffer */
 
         switch (inputBuffer[i]){
@@ -99,8 +99,8 @@ void setup(char inputBuffer[], char *args[],int *background)
      }    /* end of for */
      args[ct] = NULL; /* just in case the input line was > 80 */
 
-	for (i = 0; i <= ct; i++)
-		printf("args %d = %s\n",i,args[i]);
+	//for (i = 0; i <= ct; i++)
+	//	printf("args %d = %s\n",i,args[i]);
 } /* end of setup routine */
  
 int main(void)
@@ -175,7 +175,7 @@ int main(void)
                             findExecutablePath(args, executablePath);
                             // if executable does not exist
                             if (strcmp(executablePath, "")==0 ) {
-                                printf("%s executable could not found !!\n", args[0]);
+                                fprintf(stderr, "%s executable could not found !!\n", args[0]);
                             }
                             else { // execution
                                 printf("%s executable path is: %s \n", args[0], executablePath);
