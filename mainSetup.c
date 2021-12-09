@@ -29,7 +29,8 @@ struct aliasNode *head = NULL;
 // APPEND = >>
 // FROM_FILE = <
 // TO_STDOUT is default io device (terminal)
-enum redirection_type {TO_FILE, APPEND, FROM_FILE, TO_STDOUT};
+// BOTH_FROM_FILE_TO_FILE example: myprog [args] < file.in > file.out
+enum redirection_type {TO_FILE, APPEND, FROM_FILE, TO_STDOUT, BOTH_FROM_FILE_TO_FILE};
 
 
 int status = 0;
@@ -49,6 +50,7 @@ int findRedirectionFilenameIndex(char * args[MAX_LINE/2 + 1]);
 void switchIoToFile(char* filename);
 void switchIoAppend(char* filename);
 void switchIoFromFile(char* filename);
+int findRedirectionOutputForBothIndex(char * args[MAX_LINE/2 + 1]);
 /* The setup function below will not return any value, but it will just: read
 in the next command line; separate it into distinct arguments (using blanks as
 delimiters), and set the args array entries to point to the beginning of what
@@ -409,8 +411,11 @@ enum redirection_type getIoRedirectionType(char * args[MAX_LINE/2 + 1]) {
             return APPEND;
         }
 
-        // If FROM_FILE (<)
+        // Either FROM_FILE or BOTH_FROM_FILE_TO_FILE
         if (strcmp(args[i], "<")==0) {
+            if ((args[i+2] != NULL) && (strcmp(args[i+2], ">") == 0))
+                return BOTH_FROM_FILE_TO_FILE;
+
             return FROM_FILE;
         }
     }
@@ -429,6 +434,15 @@ void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]
 
     int fd;
     int fileNameIndex = findRedirectionFilenameIndex(args);
+    
+    if (io_device == BOTH_FROM_FILE_TO_FILE) {
+        printf("redirection type is BOTH_FROM_FILE_TO_FILE\n");
+        
+        switchIoFromFile(args[fileNameIndex]);
+        int outputFileIndex = findRedirectionOutputForBothIndex(args);
+        switchIoToFile(args[outputFileIndex]);
+    }
+    
     if (io_device == TO_FILE) {
         printf("redirection type is TO_FILE\n");
         switchIoToFile(args[fileNameIndex]);
@@ -455,6 +469,16 @@ int findRedirectionFilenameIndex(char * args[MAX_LINE/2 + 1]) {
         }
     }
 
+}
+
+// finds output file name for BOTH_FROM_FILE_TO_FILE
+int findRedirectionOutputForBothIndex(char * args[MAX_LINE/2 + 1]) {
+    int i;
+    for (i=1; args[i] != NULL; i++) {
+        if ((strcmp(args[i], ">")==0)) {
+            return i + 1;
+        }
+    }
 }
 
 void clearRedirectionTypeFromArgs(char * args[MAX_LINE/2 + 1]) {
