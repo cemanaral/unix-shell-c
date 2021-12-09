@@ -1,5 +1,0 @@
-cem.txt
-CSE3033_Project2.pdf
-ls.txt
-mainSetup
-mainSetup.c

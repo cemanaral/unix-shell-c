@@ -11,6 +11,7 @@
 #define MAX_LINE 80 /* 80 chars per line, per command, should be enough. */
 
 #define TO_FILE_CREATE_FLAGS (O_WRONLY | O_CREAT | O_TRUNC)
+#define APPEND_CREATE_FLAGS (O_WRONLY | O_CREAT | O_APPEND)
 #define CREATE_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
 // will be used for alias/unalias functionality
@@ -44,6 +45,7 @@ void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]
 void clearRedirectionTypeFromArgs(char * args[MAX_LINE/2 + 1]);
 int findRedirectionFilenameIndex(char * args[MAX_LINE/2 + 1]);
 void switchIoToFile(char* filename);
+void switchIoToAppend(char* filename);
 
 /* The setup function below will not return any value, but it will just: read
 in the next command line; separate it into distinct arguments (using blanks as
@@ -431,8 +433,7 @@ void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]
     }
     else if (io_device == APPEND) {
         printf("redirection type is APPEND\n");
-
-
+        switchIoToAppend(args[fileNameIndex]);
     }
     else if (io_device == FROM_FILE) {        
         printf("redirection type is FROM_FILE\n");
@@ -468,6 +469,22 @@ void clearRedirectionTypeFromArgs(char * args[MAX_LINE/2 + 1]) {
 
 void switchIoToFile(char* filename) {
     int fd = open(filename, TO_FILE_CREATE_FLAGS, CREATE_MODE);
+    if (fd == -1) {
+        fprintf(stderr, "Failed to open file \n");
+        exit(1);
+    }
+    if (dup2(fd, STDOUT_FILENO) == -1) {
+        fprintf(stderr, "Failed to redirect standard output\n");
+        exit(1);
+    }
+    if (close(fd) == -1) {
+        fprintf(stderr, "Failed to close the file\n");
+        exit(1);
+    }
+}
+
+void switchIoToAppend(char* filename) {
+    int fd = open(filename, APPEND_CREATE_FLAGS, CREATE_MODE);
     if (fd == -1) {
         fprintf(stderr, "Failed to open file \n");
         exit(1);
