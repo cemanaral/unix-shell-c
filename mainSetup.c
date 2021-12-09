@@ -395,16 +395,14 @@ enum redirection_type getIoRedirectionType(char * args[MAX_LINE/2 + 1]) {
     // loops arguments
     for (i=1; args[i] != NULL; i++) {
 
-        // either TO_FILE or APPEND
+        // if TO_FILE
         if (strcmp(args[i], ">")==0) {
-            // If APPEND (>>)
-            if (strcmp(args[i-1], ">")==0) {
-                return APPEND;
-            }
-            // If TO_FILE (>)
-            else {
-                return TO_FILE;
-            }
+            return TO_FILE;
+        }
+
+        // if APPEND
+        if (strcmp(args[i], ">>")==0) {
+            return APPEND;
         }
 
         // If FROM_FILE (<)
