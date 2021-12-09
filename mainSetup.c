@@ -28,7 +28,6 @@ struct aliasNode *head = NULL;
 // TO_STDOUT is default io device (terminal)
 enum redirection_type {TO_FILE, APPEND, FROM_FILE, TO_STDOUT};
 
-// TODO: FIX APPEND
 
 int status = 0;
 pid_t forkResult; // holds the result of fork()
@@ -44,6 +43,7 @@ enum redirection_type getIoRedirectionType(char * args[MAX_LINE/2 + 1]);
 void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]);
 void clearRedirectionTypeFromArgs(char * args[MAX_LINE/2 + 1]);
 int findRedirectionFilenameIndex(char * args[MAX_LINE/2 + 1]);
+void switchIoToFile(char* filename);
 
 /* The setup function below will not return any value, but it will just: read
 in the next command line; separate it into distinct arguments (using blanks as
@@ -427,23 +427,7 @@ void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]
     int fileNameIndex = findRedirectionFilenameIndex(args);
     if (io_device == TO_FILE) {
         printf("redirection type is TO_FILE\n");
-
-        fd = open(args[fileNameIndex], TO_FILE_CREATE_FLAGS, CREATE_MODE);
-        if (fd == -1) {
-		    fprintf(stderr, "Failed to open file \n");
-		    exit(1);
-	    }
-        if (dup2(fd, STDOUT_FILENO) == -1) {
-		    fprintf(stderr, "Failed to redirect standard output\n");
-		    exit(1);
-	    }
-        if (close(fd) == -1) {
-	    	fprintf(stderr, "Failed to close the file\n");
-		    exit(1);
-	    }
-        
-
-        
+        switchIoToFile(args[fileNameIndex]);
     }
     else if (io_device == APPEND) {
         printf("redirection type is APPEND\n");
@@ -479,5 +463,21 @@ void clearRedirectionTypeFromArgs(char * args[MAX_LINE/2 + 1]) {
             args[i] = NULL;
             return;
         }
+    }
+}
+
+void switchIoToFile(char* filename) {
+    int fd = open(filename, TO_FILE_CREATE_FLAGS, CREATE_MODE);
+    if (fd == -1) {
+        fprintf(stderr, "Failed to open file \n");
+        exit(1);
+    }
+    if (dup2(fd, STDOUT_FILENO) == -1) {
+        fprintf(stderr, "Failed to redirect standard output\n");
+        exit(1);
+    }
+    if (close(fd) == -1) {
+        fprintf(stderr, "Failed to close the file\n");
+        exit(1);
     }
 }
