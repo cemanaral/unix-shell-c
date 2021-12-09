@@ -10,7 +10,7 @@
  
 #define MAX_LINE 80 /* 80 chars per line, per command, should be enough. */
 
-#define CREATE_FLAGS (O_WRONLY | O_CREAT)
+#define TO_FILE_CREATE_FLAGS (O_WRONLY | O_CREAT | O_TRUNC)
 #define CREATE_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
 // will be used for alias/unalias functionality
@@ -430,18 +430,18 @@ void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]
     if (io_device == TO_FILE) {
         printf("redirection type is TO_FILE\n");
 
-        fd = open(args[fileNameIndex], CREATE_FLAGS, CREATE_MODE);
+        fd = open(args[fileNameIndex], TO_FILE_CREATE_FLAGS, CREATE_MODE);
         if (fd == -1) {
-		    perror("Failed to open my.file");
-		    return;
+		    fprintf(stderr, "Failed to open file \n");
+		    exit(1);
 	    }
         if (dup2(fd, STDOUT_FILENO) == -1) {
-		    perror("Failed to redirect standard output");
-		    return;
+		    fprintf(stderr, "Failed to redirect standard output\n");
+		    exit(1);
 	    }
         if (close(fd) == -1) {
-	    	perror("Failed to close the file");
-		    return;
+	    	fprintf(stderr, "Failed to close the file\n");
+		    exit(1);
 	    }
         
 

@@ -1,0 +1,10 @@
+a.txt
+cem.txt
+CSE3033_Project2.pdf
+ls2.txt
+ls333.txt
+ls.txt
+mainSetup
+mainSetup.c
+ps.txt
+yeni.txt
