@@ -269,8 +269,8 @@ void printAliases() {
 // and insert to linked list
 void addAlias(char* aliasName, char* command) {
     struct aliasNode* node = (struct aliasNode*)malloc(sizeof(struct aliasNode));
-    node->aliasName = malloc(MAX_LINE/2 +1);
-    node->command = malloc(MAX_LINE/2 +1);
+    node->aliasName = strdup(aliasName);
+    node->command = strdup(command);
     strcpy(node->aliasName, aliasName);
     strcpy(node->command, command);
 
