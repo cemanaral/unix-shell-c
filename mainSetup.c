@@ -6,8 +6,12 @@
 #include <sys/wait.h>
 #include <dirent.h> 
 #include <signal.h>
+#include <fcntl.h>
  
 #define MAX_LINE 80 /* 80 chars per line, per command, should be enough. */
+
+#define CREATE_FLAGS (O_WRONLY | O_CREAT)
+#define CREATE_MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 
 // will be used for alias/unalias functionality
 struct aliasNode {
@@ -16,6 +20,15 @@ struct aliasNode {
     struct aliasNode* next;
 };
 struct aliasNode *head = NULL;
+
+// It is used for redirection types
+// TO_FILE = >
+// APPEND = >>
+// FROM_FILE = <
+// TO_STDOUT is default io device (terminal)
+enum redirection_type {TO_FILE, APPEND, FROM_FILE, TO_STDOUT};
+
+// TODO: FIX APPEND
 
 int status = 0;
 pid_t forkResult; // holds the result of fork()
@@ -27,6 +40,10 @@ void removeAlias(char* aliasName);
 struct aliasNode* findAlias(char* aliasName);
 void alias(char * args[MAX_LINE/2 + 1]);
 void handlerFunction();
+enum redirection_type getIoRedirectionType(char * args[MAX_LINE/2 + 1]);
+void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]);
+void clearRedirectionTypeFromArgs(char * args[MAX_LINE/2 + 1]);
+int findRedirectionFilenameIndex(char * args[MAX_LINE/2 + 1]);
 
 /* The setup function below will not return any value, but it will just: read
 in the next command line; separate it into distinct arguments (using blanks as
@@ -121,6 +138,8 @@ int main(void)
                 return 1;
             }
 
+            enum redirection_type currentRedirectionType;
+
             
             while (1){
                         strcpy(executablePath, "");
@@ -128,6 +147,11 @@ int main(void)
                         printf("myshell: \n");
                         /*setup() calls exit() when Control-D is entered */
                         setup(inputBuffer, args, &background);
+
+
+                        currentRedirectionType = getIoRedirectionType(args);
+
+
 
                         // if alias command is called
                         if (args[0] != NULL && strcmp(args[0], "alias")==0) {
@@ -185,6 +209,9 @@ int main(void)
                                     args[1] = NULL;
                                 }
                                 
+                                changeIoDevice(currentRedirectionType, args);
+                                clearRedirectionTypeFromArgs(args);
+
                                 execv(executablePath, args);
                             }
                             
@@ -360,4 +387,99 @@ void handlerFunction(int signo) {
     printf("\nhandler function is called \n");
     printf("exiting shell.. \n");
     exit(0);
+}
+
+// detects the IO type from args
+enum redirection_type getIoRedirectionType(char * args[MAX_LINE/2 + 1]) {
+    int i;
+    // loops arguments
+    for (i=1; args[i] != NULL; i++) {
+
+        // either TO_FILE or APPEND
+        if (strcmp(args[i], ">")==0) {
+            // If APPEND (>>)
+            if (strcmp(args[i-1], ">")==0) {
+                return APPEND;
+            }
+            // If TO_FILE (>)
+            else {
+                return TO_FILE;
+            }
+        }
+
+        // If FROM_FILE (<)
+        if (strcmp(args[i], "<")==0) {
+            return FROM_FILE;
+        }
+    }
+
+    // default io device (the terminal)
+    return TO_STDOUT;
+}
+
+
+void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]) {
+
+    if (io_device == TO_STDOUT) {
+        printf("redirection type is TO_STDOUT\n");
+        return;
+    }
+
+    int fd;
+    int fileNameIndex = findRedirectionFilenameIndex(args);
+    if (io_device == TO_FILE) {
+        printf("redirection type is TO_FILE\n");
+
+        fd = open(args[fileNameIndex], CREATE_FLAGS, CREATE_MODE);
+        if (fd == -1) {
+		    perror("Failed to open my.file");
+		    return;
+	    }
+        if (dup2(fd, STDOUT_FILENO) == -1) {
+		    perror("Failed to redirect standard output");
+		    return;
+	    }
+        if (close(fd) == -1) {
+	    	perror("Failed to close the file");
+		    return;
+	    }
+        
+
+        
+    }
+    else if (io_device == APPEND) {
+        printf("redirection type is APPEND\n");
+
+
+    }
+    else if (io_device == FROM_FILE) {        
+        printf("redirection type is FROM_FILE\n");
+    
+    
+    }
+    clearRedirectionTypeFromArgs(args);
+
+
+}
+
+int findRedirectionFilenameIndex(char * args[MAX_LINE/2 + 1]) {
+    int i;
+    for (i=1; args[i] != NULL; i++) {
+        // if either ">",  ">>" or "<"
+        if ((strcmp(args[i], ">")==0) || (strcmp(args[i], ">>")==0) || (strcmp(args[i], "<")==0)) {
+            return i + 1;
+        }
+    }
+
+}
+
+void clearRedirectionTypeFromArgs(char * args[MAX_LINE/2 + 1]) {
+    int i;
+    for (i=1; args[i] != NULL; i++) {
+        // if either ">",  ">>" or "<"
+        if ((strcmp(args[i], ">")==0) || (strcmp(args[i], ">>")==0) || (strcmp(args[i], "<")==0)) {
+            args[i] = NULL;
+            return;
+        }
+    }
 }
