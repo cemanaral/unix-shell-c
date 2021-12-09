@@ -187,7 +187,19 @@ int main(void)
                         }
 
                         if (strcmp(args[0], "exit")==0) {
-                            if (!background) {
+                            // checks if there are background processes
+                            int output = waitpid(-1, NULL, WNOHANG);
+                        
+                            // if waitpid returns > 0 
+                            // this means a past child process was a zombie
+                            // so get the current status I call waitpid again
+                            if (output > 0) output = waitpid(-1, NULL, WNOHANG);
+
+                            if (output == 0) {
+                                fprintf(stderr, "There are backround processes that are still running!!\n");
+                                continue;
+                            }
+                            else {
                                 exit(0);
                             }
                         }
