@@ -402,6 +402,20 @@ struct aliasNode* findAlias(char* aliasName) {
 }
 
 void handlerFunction(int signo) {
+    pid_t pid;
+
+    int output = waitpid(-1, &pid, WNOHANG);
+    // if waitpid returns > 0 
+    // this means a past child process was a zombie
+    // so get the current status I call waitpid again
+    if (output > 0) output = waitpid(-1, &pid, WNOHANG);
+
+    // there is a background or forebround process still running
+    if (output == 0) {
+        fprintf(stderr, "there is still a process running pid %d", pid);
+        return;
+    }
+
     printf("\nhandler function is called \n");
     printf("exiting shell.. \n");
     exit(0);
