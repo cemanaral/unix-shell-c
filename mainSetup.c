@@ -35,6 +35,10 @@ enum redirection_type {TO_FILE, APPEND, FROM_FILE, TO_STDOUT, BOTH_FROM_FILE_TO_
 
 int status = 0;
 pid_t forkResult; // holds the result of fork()
+int isForegroundProcessRunning; // 1 if it is a backround process else 0
+pid_t foregroundPID; // holds the currently running foreground process' id (used in ^Z signal handling)
+
+
 // function headers
 void findExecutablePath(char * args[MAX_LINE/2 + 1], char executablePath[MAX_LINE]);
 void printAliases();
@@ -245,8 +249,12 @@ int main(void)
                             }
                                 
                             else {
+                                isForegroundProcessRunning = 1;
+                                foregroundPID = forkResult;
                                 // wait for all childs
                                 while (wait(&status) > 0);
+                                isForegroundProcessRunning = 0;
+
                             }
                                 
                                 
@@ -401,24 +409,17 @@ struct aliasNode* findAlias(char* aliasName) {
     return current;
 }
 
+// Used for handling ^Z signal
 void handlerFunction(int signo) {
-    pid_t pid;
+    
+    if (isForegroundProcessRunning) {
+        kill(foregroundPID, SIGKILL);
 
-    int output = waitpid(-1, &pid, WNOHANG);
-    // if waitpid returns > 0 
-    // this means a past child process was a zombie
-    // so get the current status I call waitpid again
-    if (output > 0) output = waitpid(-1, &pid, WNOHANG);
-
-    // there is a background or forebround process still running
-    if (output == 0) {
-        fprintf(stderr, "there is still a process running pid %d", pid);
-        return;
     }
-
-    printf("\nhandler function is called \n");
-    printf("exiting shell.. \n");
-    exit(0);
+    else {
+        fprintf(stderr, "There is no foreground process running! \n");
+    }
+    
 }
 
 // detects the IO type from args
