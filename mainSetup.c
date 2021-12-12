@@ -142,7 +142,7 @@ int main(void)
             // setting up signal handler
             struct sigaction act;
             act.sa_handler = handlerFunction;            /* set up signal handler */
-            act.sa_flags = 0;
+            act.sa_flags = SA_RESTART; // to avoid segmentation fault after execution of handlerFunction
             if ((sigemptyset(&act.sa_mask) == -1) || (sigaction(SIGTSTP, &act, NULL) == -1)) {
                 perror("Failed to set SIGTSTP handler");
                 return 1;
@@ -459,7 +459,6 @@ void changeIoDevice(enum redirection_type io_device, char * args[MAX_LINE/2 + 1]
         return;
     }
 
-    int fd;
     int fileNameIndex = findRedirectionFilenameIndex(args);
     
     if (io_device == BOTH_FROM_FILE_TO_FILE) {
